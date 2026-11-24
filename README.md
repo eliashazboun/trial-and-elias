@@ -111,3 +111,5 @@ See [Cloudflare setup and approval](docs/CLOUDFLARE_SETUP.md) for exact native G
 ## Limitations
 
 Cloudflare dashboard-managed configuration and the first actual deployment require owner verification. Automated browser checks use Chromium on Windows, including a genuinely insecure HTTP test origin; independent Safari/Firefox, physical touch/audio devices and Cloudflare's Linux build environment are not independently verified. Vite warns about the large locally bundled Phaser asset; the game intentionally remains separate from the other pages so its bundle is loaded only on its route. Public source has no project-wide license selected; third-party notices are included and no uncertain downloaded art/audio/font assets were found.
+#   t r i a l - a n d - e l i a s  
+ 
