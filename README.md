@@ -2,6 +2,8 @@
 
 The existing Trial & Elias homepage, the supplied NATO Phonetic Alphabet Trainer, and the existing One Minute Dungeon game in one self-contained npm workspace repository. Production targets the existing Cloudflare Worker **trial-and-elias1**, using Workers Static Assets and native Workers Builds. No production upload or GitHub push has been performed during preparation.
 
+See [the final implementation report](INTEGRATION_REPORT.md) for actual validation results, Git status and the remaining production approval checks.
+
 ## Start locally
 
 Use Node.js 24 and npm 11.8.0 (Node 22.12+ meets the packages' minimum requirements). Version files select Node 24; packageManager pins npm. From a fresh checkout:

@@ -1,11 +1,15 @@
-# Trial & Elias integration
+# Trial & Elias integration status
 
-1. Preserve the live homepage HTML/CSS and baseline captures.
-2. Assemble independent npm/Vite applications and one production dist directory.
-3. Reuse the supplied trainer, preserving its 26-letter data, timing, storage key and complete interface.
-4. Copy the original game source and tests without changing gameplay; add only base-path compatibility and menu return navigation.
-5. Preserve homepage content and styling, adding the third Playground card and responsive grid extension.
-6. Verify all routes in Wrangler, run a local-only deployment dry run, audit public contents and prepare Git locally.
-7. Document native Git integration and rollback. Stop before pushing or production deployment.
+- [x] Preserve live homepage HTML/CSS and baseline captures.
+- [x] Assemble independent npm/Vite applications into one production dist directory.
+- [x] Reuse the complete trainer, retaining all 26 letters, distractors, timing, storage key and interface.
+- [x] Copy original game source and tests; preserve gameplay and the original external directory.
+- [x] Extend The Playground with the dungeon card and responsive three-column desktop grid.
+- [x] Verify production routes through local Wrangler, run a deployment dry run and audit public contents.
+- [x] Initialize main with the existing remote and prepare local commits without pushing.
+- [x] Verify a clean local Git clone with npm ci, typecheck, build and all 83 unit tests.
+- [x] Document native Git setup, rollback and actual validation results.
+- [ ] Owner reviews existing Worker dashboard settings and approves publishing/deployment.
+- [ ] First approved production deployment and live-domain smoke test.
 
-Production prerequisite: dashboard-managed settings, existing Worker logic/bindings/domains/routes must be verified by the owner because the local website folder contained no Worker source or Wrangler configuration. No remote changes are authorized by local preparation.
+See INTEGRATION_REPORT.md for the completed implementation, test coverage and outstanding production checks. No remote changes have been made.
