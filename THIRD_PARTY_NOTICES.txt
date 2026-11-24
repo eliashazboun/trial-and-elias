@@ -1,0 +1,25 @@
+THIRD-PARTY NOTICES
+
+The original homepage and supplied application source were provided by the project owner. The game generates its own pixel sprites, effects and synthesized audio. No downloaded art, music or font files are bundled. No project-wide license for the owner code has been selected.
+
+phaser 3.90.0 — MIT
+Full notice: public/licenses/phaser.txt
+
+react 19.3.1 — MIT
+Full notice: public/licenses/react.txt
+
+react-dom 19.3.1 — MIT
+Full notice: public/licenses/react-dom.txt
+
+scheduler 0.28.0 — MIT
+Full notice: public/licenses/scheduler.txt
+
+tailwindcss 3.4.17 — MIT
+Full notice: public/licenses/tailwindcss.txt
+
+
+vite 6.4.6 — MIT
+Full notice: public/licenses/vite.txt
+
+eventemitter3 5.0.4 — MIT
+Full notice: public/licenses/eventemitter3.txt

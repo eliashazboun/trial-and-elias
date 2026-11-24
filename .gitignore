@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.vite/
+.wrangler/
+.preservation/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.log
+.DS_Store
+Thumbs.db

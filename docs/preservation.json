@@ -1,0 +1,20 @@
+{
+  "url": "https://trialandelias.com/",
+  "homepageSha256": "cf5e22faf6e4f0f24034bde230983d0be9db376deacd80a94ba18199567decb0",
+  "cssSha256": "c7bf2ca142962afa7f83325a227888f65c2863f17f0030cbcfd64ac23598d4c0",
+  "scripts": [
+    {
+      "src": "",
+      "analytics": false
+    },
+    {
+      "src": "https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092",
+      "analytics": true
+    }
+  ],
+  "originalGameSha256": "27da8a0cdef86db86946e888612c089b88e24dba8c4ef960e43bcbfcbf536a34",
+  "trainerSourceSha256": "7af5fb623ef91279f951f8f5e731f8e5a16cba7cbec022aa2c94144fc8744ac7",
+  "headerSha256": "6f68d71991037a58e67fc12bfb5e7ab720e5eeecc7a841bc929cf6d40d3e5c12",
+  "heroSha256": "294c9045fc1d0325529a206d358bc3ffecbd61eff4284a94134f949c01f800b4",
+  "trainerAlphabetSha256": "53f9d7245572cdf6c276032a4e4132ad14860a23c764a2d5cd6b4dfb39b5cc55"
+}
