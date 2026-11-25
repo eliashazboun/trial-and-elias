@@ -22,10 +22,12 @@ Browser/visual review discovered and fixed reload lease contention, errors hidde
 
 ## Final verification / remaining review
 
-- [ ] Confirm the local committed checkout installs with npm ci and builds independently; record the result below.
+- [x] Clean Git clone of implementation commit e642599 installed with npm ci (375 packages), passed the unified build/typecheck and all 126 tests. No external source folders were needed.
 - [ ] Owner reviews gameplay and confirms the existing Worker dashboard script/bindings/flags/domain/routes before approving publication.
 - [ ] Physical phone/Safari/Firefox and high-refresh hardware review; near-budget storage and large-history stress profiling.
 - [ ] First approved Cloudflare Linux build and actual-domain smoke check.
 - [ ] Optional ad provider selection/account eligibility/consent verification, only if separately approved. Production ads remain disabled.
 
 No remote push, Worker creation, DNS change or production deployment is performed. The application does not continue implementing itself after the session. Future work should start with any failed real-device/storage review, not by replacing the verified engine. Preserve the current schema and confirmed paytables.
+
+Final validation: clean-clone install/build/test passed; final Blackjack presentation suite passed all eight scenarios; the whole site has 14 passing Worker browser scenarios. Dependency audit: zero known vulnerabilities. Final Wrangler dry run read 68 static files and exited without upload. Local dev/review processes were stopped for handoff.

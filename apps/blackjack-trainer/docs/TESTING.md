@@ -28,3 +28,5 @@ Viewport emulation for the twelve-hand case: 1280×720, 1440×900, 1920×1080, 3
 Measured idle development table in headless Chromium on this Windows workstation at 1440×900: 119 requestAnimationFrame intervals, mean 16.81 ms, p95 16.80 ms, approximately 59.5 FPS. This is a real local sample, not a guarantee of 60 FPS on phones or proof of 120 Hz rendering. No physical phone, Safari/Firefox, native Linux build or live Cloudflare production run was available.
 
 See DEVELOPMENT_PROGRESS.md and IMPLEMENTATION_REPORT.md for the latest final run and clean-install/dry-run status. Never claim unexecuted scenarios passed.
+
+Final clean checkout: local implementation commit e642599 was cloned into an isolated temporary directory. npm ci installed 375 packages; unified strict build and all 126 tests passed. The final complete Worker suite has 14 passing scenarios; the eight Blackjack scenarios were rerun after final visual changes and passed. Local dry run read 68 assets and performed no upload. Source and npm audits passed.

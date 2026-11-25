@@ -33,7 +33,7 @@ Open http://127.0.0.1:5175/blackjack-trainer/. The homepage is http://127.0.0.1:
 - Production build and local Wrangler dry run pass. Worker routing includes direct loads/refreshes, slash redirects with query strings and real missing-path 404s for Blackjack and the original entries.
 - npm audit reports zero known vulnerabilities after patching Zod and the shared Vitest runner. Public-source audit passes. Runtime license notices ship with the artifact.
 - Measured idle development table in headless Chromium/Windows at 1440×900: 119 frame intervals, mean 16.81 ms, p95 16.80 ms, about 59.5 FPS. This does not prove high-refresh or physical-phone performance.
-- Clean-clone install/build verification is recorded in the final progress update after the local implementation commit.
+- A clean Git clone of implementation commit e642599 installed 375 packages using npm ci, built all four entries with strict typechecks and passed all 126 tests without external folders.
 
 ## Local Git and production boundary
 
