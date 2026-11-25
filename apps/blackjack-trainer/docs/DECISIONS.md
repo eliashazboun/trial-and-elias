@@ -1,0 +1,13 @@
+# Decisions
+
+- **Website integration authorized:** the owner's follow-up explicitly requests integration like the dungeon. Use apps/blackjack-trainer, /blackjack-trainer/, the root registry/build and a Playground card. This supersedes the original standalone-only destination. Production push/deployment remains excluded.
+- **Engine first:** deterministic command/event architecture keeps rules and money independent of visual frame rate. Integer half-chip units enforce exact odd-wager blackjack and insurance arithmetic.
+- **Persistence:** one authoritative versioned snapshot plus ownership, committed with revision and lease checks. Separate per-domain object stores were considered; the single snapshot makes wallet/round atomicity easier to audit. Trade-off: a near-budget history entails larger writes; benchmark on target phones before raising retention.
+- **Concurrency:** Web Locks plus database lease/CAS. The lease-only initial implementation delayed immediate refresh; the browser regression exposed it and Web Locks now safely reclaim a new document's writer lease. Fallback recovery remains documented at up to eight seconds.
+- **Split order:** sequential first child then siblings; equal-value ten ranks may split. These are the specification's selected defaults.
+- **Dealer reveal:** always reveal the hole card after the round, including all-bust rounds. Do not make unnecessary dealer draws. Only newly exposed physical cards affect Hi-Lo.
+- **Total-dependent strategy:** S17/DAS/no-surrender charts for one, two and 4–8 decks. The three larger deck counts share the validated conventional table. Two-deck soft 18 versus ace follows the reference's number-of-cards convention: hit with two cards, stand with more. No count deviations or live shoe-composition optimization are introduced.
+- **Graphics and audio:** original generated textures and synthesized sounds avoid hotlinked assets and uncertain redistribution rights. All dependencies have bundled notices. Card artwork is replaceable.
+- **Ads:** disabled production provider; legitimate reward events require an idempotent persisted receipt. No provider, credentials, consent SDK or tracking script is activated. Local mocks are imported only by tests.
+- **Dependency patching:** upgraded Zod to 4.6.7 and the shared test runner to Vitest 4.1.12 after audit findings. The integrated dungeon's devDependency version changes; gameplay source is untouched. Full regressions run on the patched runner.
+- **History and export:** 100–5,000 detailed rounds plus a 25 MB soft detail budget, lifetime aggregates preserved. Export replaces data only after validation and confirmation; no reward merge. CSV fields identify half-chip units and neutralize spreadsheet formula prefixes.

@@ -82,7 +82,7 @@ test("preserves the original homepage appearance, content and navigation through
   await page.goto("/", { waitUntil: "networkidle" });
   await expect(page).toHaveTitle("Trial & Elias — A Collection of Experiments");
   await expect(page.locator("header .brand .blue")).toHaveCount(2);
-  await expect(page.locator("#projects .card")).toHaveCount(3);
+  await expect(page.locator("#projects .card")).toHaveCount(4);
   await expect(
     page.locator("#projects .card").last().locator("a,button"),
   ).toHaveCount(0);
@@ -145,7 +145,7 @@ test("preserves the original homepage appearance, content and navigation through
     page.getByRole("button", { name: "Enter the crypt" }),
   ).toBeVisible();
   await page.goForward();
-  await expect(page.locator("#projects .card")).toHaveCount(3);
+  await expect(page.locator("#projects .card")).toHaveCount(4);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("#projects .grid")).toHaveCSS(
     "grid-template-columns",
@@ -166,12 +166,12 @@ test("all direct routes refresh correctly, slash redirects preserve queries, and
   page,
   request,
 }) => {
-  for (const route of ["/", TRAINER, GAME]) {
+  for (const route of ["/", TRAINER, GAME, "/blackjack-trainer/"]) {
     const response = await page.goto(route);
     expect(response?.status()).toBe(200);
     expect((await page.reload())?.status()).toBe(200);
   }
-  for (const route of [TRAINER, GAME]) {
+  for (const route of [TRAINER, GAME, "/blackjack-trainer/"]) {
     const response = await request.get(
       route.slice(0, -1) + "?source=bookmark",
       { maxRedirects: 0 },
@@ -183,6 +183,7 @@ test("all direct routes refresh correctly, slash redirects preserve queries, and
     expect(url.search).toBe("?source=bookmark");
   }
   for (const route of [
+    "/blackjack-trainer/does-not-exist",
     "/does-not-exist/",
     "/one-minute-dungeon/does-not-exist",
     "/nato-phonetic-alphabet-trainer/does-not-exist",
@@ -435,7 +436,7 @@ test("compiled dungeon starts, pauses, retries, preserves separate storage and r
   await page
     .getByRole("link", { name: "← Trial & Elias", exact: true })
     .click();
-  await expect(page.locator("#projects .card")).toHaveCount(3);
+  await expect(page.locator("#projects .card")).toHaveCount(4);
   const saved = await page.evaluate(
     (key) => ({
       trainer: JSON.parse(localStorage.getItem(key)!),

@@ -26,6 +26,15 @@ export const projects: Project[] = [
     cta: "Enter the Dungeon →",
   },
   {
+    icon: "♠️",
+    status: "Play Now",
+    title: "Blackjack Trainer",
+    description:
+      "A virtual table. A better decision. Practice blackjack, basic strategy, and Hi-Lo counting at your own pace.",
+    url: "/blackjack-trainer/",
+    cta: "Take a Seat →",
+  },
+  {
     icon: "🧪",
     status: "Coming Soon",
     title: "More Experiments",

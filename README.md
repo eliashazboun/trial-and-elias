@@ -1,6 +1,6 @@
 # Trial & Elias
 
-The existing Trial & Elias homepage, the supplied NATO Phonetic Alphabet Trainer, and the existing One Minute Dungeon game in one self-contained npm workspace repository. Production targets the existing Cloudflare Worker **trial-and-elias1**, using Workers Static Assets and native Workers Builds. No production upload or GitHub push has been performed during preparation.
+The existing Trial & Elias homepage, the supplied NATO Phonetic Alphabet Trainer, the existing One Minute Dungeon game, and Blackjack Trainer in one self-contained npm workspace repository. Production targets the existing Cloudflare Worker **trial-and-elias1**, using Workers Static Assets and native Workers Builds. No production upload or GitHub push has been performed during preparation.
 
 See [the final implementation report](INTEGRATION_REPORT.md) for actual validation results, Git status and the remaining production approval checks.
 
@@ -24,22 +24,23 @@ Development URLs:
 | Homepage     | http://127.0.0.1:5175/                                |
 | NATO trainer | http://127.0.0.1:5175/nato-phonetic-alphabet-trainer/ |
 | Dungeon      | http://127.0.0.1:5175/one-minute-dungeon/             |
+| Blackjack    | http://127.0.0.1:5175/blackjack-trainer/              |
 
-The root Vite server proxies the two independent development applications on ports 5185 and 5186. HMR uses those application servers. Ctrl+C closes the development servers. The ports avoid the original standalone game's usual ports. A production build has no dependency on these development processes.
+The root Vite server proxies the two independent development applications on ports 5185, 5186 and 5187. HMR uses those application servers. Ctrl+C closes the development servers. The ports avoid the original standalone game's usual ports. A production build has no dependency on these development processes.
 
 ## Commands
 
 | Command                | Purpose                                                                                       |
 | ---------------------- | --------------------------------------------------------------------------------------------- |
 | npm install / npm ci   | Install all workspace dependencies from the root                                              |
-| npm run dev            | Start all three applications behind one development origin                                    |
+| npm run dev            | Start all four entries behind one development origin                                    |
 | npm run typecheck      | Strict TypeScript checks for the homepage, trainer, game and test source                      |
 | npm run test           | Homepage preservation tests, trainer logic/history tests and all original game tests          |
 | npm run build          | Build and assemble every entry point into one dist directory; never deploys                   |
 | npm run preview        | Serve the complete compiled artifact on http://127.0.0.1:4175/                                |
 | npm run dev:worker     | Build, then run the actual local Worker on http://127.0.0.1:8787/                             |
 | npm run worker:serve   | Serve an already-built verified artifact in the local Worker                                  |
-| npm run test:e2e       | Build and test all three production routes through the local Worker                           |
+| npm run test:e2e       | Build and test all four production routes through the local Worker                           |
 | npm run test:e2e:game  | Run the integrated game's complete original browser suite                                     |
 | npm run audit:public   | Scan publishable source for credentials, private environment files and machine-specific paths |
 | npm run deploy:dry-run | Build and validate Wrangler locally without uploading                                         |
@@ -113,3 +114,6 @@ See [Cloudflare setup and approval](docs/CLOUDFLARE_SETUP.md) for exact native G
 Cloudflare dashboard-managed configuration and the first actual deployment require owner verification. Automated browser checks use Chromium on Windows, including a genuinely insecure HTTP test origin; independent Safari/Firefox, physical touch/audio devices and Cloudflare's Linux build environment are not independently verified. Vite warns about the large locally bundled Phaser asset; the game intentionally remains separate from the other pages so its bundle is loaded only on its route. Public source has no project-wide license selected; third-party notices are included and no uncertain downloaded art/audio/font assets were found.
 #   t r i a l - a n d - e l i a s  
  
+## Blackjack Trainer
+
+Blackjack Trainer is now included at /blackjack-trainer/ with its own Playground card, isolated React/Tailwind/Phaser app and namespaced IndexedDB. The original homepage header, hero and stylesheet remain; the dungeon and NATO trainer source and storage keys are retained. See [the Blackjack implementation report](apps/blackjack-trainer/docs/IMPLEMENTATION_REPORT.md), [app README](apps/blackjack-trainer/README.md) and [progress](apps/blackjack-trainer/DEVELOPMENT_PROGRESS.md). The earlier integration report documents the original three-entry consolidation; Blackjack is the subsequent expansion. No production action is authorized by the local implementation.

@@ -9,4 +9,9 @@ export const applications = [
     directory: "apps/one-minute-dungeon",
     port: 5186,
   },
+  {
+    slug: "blackjack-trainer",
+    directory: "apps/blackjack-trainer",
+    port: 5187,
+  },
 ];

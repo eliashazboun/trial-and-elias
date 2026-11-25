@@ -1,0 +1,13 @@
+# Known limits and remaining release checks
+
+- This is a local implementation. No owner-approved production push/deployment, native Builds connection, DNS/domain/route change or ad-provider activation has occurred.
+- The existing manually deployed Worker's source, bindings, flags and dashboard analytics configuration are not available in local source. Those settings must be verified before any approved production deployment.
+- Strategy uses researched conventional charts, not a finite-deck EV solver. Rare composition-dependent exceptions and count deviations are outside the selected training convention. Mathematical tests and 500 seeded rounds are substantial regression evidence, not certification of every possible round tree.
+- Tested browser: Chromium on Windows, including emulated desktop/phone/tablet viewports. Physical devices, Safari/Firefox, native Cloudflare Linux builds, high-refresh-rate monitors, and worst-case near-budget history/storage performance remain unverified.
+- The idle table measured about 59.5 FPS in headless Chromium. Do not advertise a measured 120 Hz performance guarantee. Large Phaser bundles produce normal Vite chunk-size warnings; the bundle loads only on the Blackjack route.
+- The persistence model writes a bounded authoritative snapshot. Near the 25 MB detail budget, command saves may be slower on low-end devices. Ledger history uses a reconciled baseline after 20,000 entries; pruned detail cannot be reconstructed by filters. Explicitly retained-detail captions explain this boundary.
+- Browser-local state, hidden cards, clocks and rewards can be inspected or manipulated. One writer is supported via Web Locks plus IndexedDB lease/CAS; the fallback can take up to eight seconds after a stale owner. Deliberate browser tampering is outside the protection model.
+- No service worker/PWA is included. An already loaded game uses local assets and logic, but cold-start offline support is not claimed.
+- Original programmatic textures and synthesized lounge/ambience/effects are included. They are replaceable and do not depend on downloaded artwork or recorded audio. No third-party asset URL is required during play. The owner has not selected a project-wide source license.
+- No production advertising provider is approved. SDK/inventory eligibility, account requirements, consent, age and regional policies remain provider-specific prerequisites; the wallet accurately shows unavailable. No fake completion control exists in the production interface.
+- The complete specification is preserved. Final public-release signoff still requires the owner's review, audience/privacy checks and actual domain smoke test. Do not treat file presence or a local dry run as proof that production is configured.

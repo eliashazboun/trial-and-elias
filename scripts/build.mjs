@@ -29,5 +29,5 @@ await fs.writeFile(
 );
 await verifyBuild();
 console.log(
-  "All three applications assembled into dist/. No deployment performed.",
+  "All application entries assembled into dist/. No deployment performed.",
 );

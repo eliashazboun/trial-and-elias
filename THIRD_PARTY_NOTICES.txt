@@ -23,3 +23,5 @@ Full notice: public/licenses/vite.txt
 
 eventemitter3 5.0.4 — MIT
 Full notice: public/licenses/eventemitter3.txt
+
+Blackjack Trainer runtime dependency notices: public/licenses/blackjack/. See apps/blackjack-trainer/docs/ASSET_LICENSES.md for versions and original generated assets.

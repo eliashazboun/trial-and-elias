@@ -22,15 +22,16 @@ describe("original homepage preservation and integration", () => {
     );
   });
   it("extends The Playground to the two applications plus an inactive original placeholder", () => {
-    expect(projects).toHaveLength(3);
+    expect(projects).toHaveLength(4);
     expect(projects.map((p) => p.url)).toEqual([
       "/nato-phonetic-alphabet-trainer/",
       "/one-minute-dungeon/",
+      "/blackjack-trainer/",
       undefined,
     ]);
     const html = renderProjects();
-    expect((html.match(/<article /g) ?? []).length).toBe(3);
-    expect((html.match(/<a href=/g) ?? []).length).toBe(2);
+    expect((html.match(/<article /g) ?? []).length).toBe(4);
+    expect((html.match(/<a href=/g) ?? []).length).toBe(3);
     expect(html).toContain('<span class="disabled">Under Construction</span>');
     expect(read("index.html")).toContain("Things I've Built");
   });

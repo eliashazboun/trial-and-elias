@@ -17,7 +17,7 @@ export default defineConfig({
         server.middlewares.use((req, res, next) => {
           const url = new URL(req.url ?? "/", "http://localhost");
           if (
-            ["/one-minute-dungeon", "/nato-phonetic-alphabet-trainer"].includes(
+            ["/one-minute-dungeon", "/nato-phonetic-alphabet-trainer", "/blackjack-trainer"].includes(
               url.pathname,
             )
           ) {
@@ -40,6 +40,7 @@ export default defineConfig({
         target: "http://127.0.0.1:5185",
         ws: true,
       },
+      "/blackjack-trainer/": { target: "http://127.0.0.1:5187", ws: true },
       "/one-minute-dungeon/": { target: "http://127.0.0.1:5186", ws: true },
     },
   },
