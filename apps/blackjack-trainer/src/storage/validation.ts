@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { assertState } from "../engine/engine";
+import { emptyCountTraining } from "../engine/types";
 import type { GameState } from "../engine/types";
 const card = z.object({
   id: z.string().max(200),
@@ -37,7 +38,7 @@ const rule = z.object({
   version: z.literal("s17-das-v1"),
 });
 const bet = z.object({
-  main: z.array(z.number()).max(1000),
+  main: z.array(z.number()).max(50000),
   pairs: z.array(z.number()).max(100),
   three: z.array(z.number()).max(100),
 });
@@ -46,7 +47,7 @@ const hand = z.object({
   parentId: z.string().optional(),
   position: z.number().int().min(0).max(2),
   cards: z.array(card).max(52),
-  stake: nonnegative,
+  stake: nonnegative.max(200000),
   split: z.boolean(),
   splitAce: z.boolean(),
   doubled: z.boolean(),
@@ -55,6 +56,19 @@ const hand = z.object({
   net: units.optional(),
 });
 const projection = z.object({
+  sideResults: z
+    .array(
+      z.object({
+        position: z.number().int().min(0).max(2),
+        kind: z.enum(["pairs", "three"]),
+        category: z.string(),
+        ratio: z.number().finite(),
+        stake: nonnegative,
+        net: units,
+        cards: z.array(card).max(3),
+      }),
+    )
+    .optional(),
   running: units,
   remaining: nonnegative,
   dealer: z.array(card.nullable()).max(52),
@@ -64,6 +78,7 @@ const projection = z.object({
 });
 const assistance = z.object({
   recommendation: z.boolean(),
+  strategyEnabled: z.boolean().optional(),
   chart: z.boolean(),
   explanation: z.boolean(),
   warning: z.boolean(),
@@ -160,6 +175,30 @@ const totals = z
   })
   .catchall(z.number().finite());
 const schema = z.object({
+  countTraining: z
+    .object({
+      visible: z.boolean(),
+      hiddenRounds: nonnegative,
+      eligibleRoundId: z.string().nullable(),
+      peekId: z.string().nullable(),
+      lastPenalty: z
+        .object({
+          id: z.string(),
+          time: z.number().finite(),
+          amount: nonnegative.max(200),
+          clearedBets: z.boolean(),
+        })
+        .nullable(),
+      lastGuess: z
+        .object({
+          id: z.string(),
+          time: z.number().finite(),
+          submitted: units,
+          correct: z.boolean(),
+        })
+        .nullable(),
+    })
+    .default(emptyCountTraining),
   reviewed: z
     .record(
       z.string(),

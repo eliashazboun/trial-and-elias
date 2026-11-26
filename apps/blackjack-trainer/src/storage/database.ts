@@ -46,14 +46,19 @@ export class Database {
     await done;
     return true;
   }
-  async load(env: Environment) {
+  async load(env: Environment, countVisible = false) {
     await this.open();
     const tx = this.db!.transaction("state", "readonly"),
       done = finish(tx);
     const raw = await request(tx.objectStore("state").get("current"));
     await done;
-    if (raw) return validateState(raw);
+    if (raw) {
+      const loaded = validateState(raw);
+      if (!raw.countTraining) loaded.countTraining.visible = countVisible;
+      return loaded;
+    }
     const state = initialState(env);
+    state.countTraining.visible = countVisible;
     await this.save(state, null);
     return state;
   }

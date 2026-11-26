@@ -23,10 +23,12 @@ export function Toggle({
   name: keyof Preferences;
 }) {
   const p = useGame((s) => s.preferences);
+  const pending = useGame((s) => s.busy || !!s.pendingCommands || s.locked);
   return (
     <Field label={label}>
       <input
         type="checkbox"
+        disabled={name === "running" && pending}
         checked={!!p[name]}
         onChange={(e) => preferences({ [name]: e.target.checked })}
       />

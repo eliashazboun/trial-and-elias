@@ -46,3 +46,6 @@ The existing Worker remains trial-and-elias1, with unchanged domain/DNS/routes a
 Read KNOWN_ISSUES.md for the full limits. Strategy follows researched total-dependent charts rather than a finite-deck EV solver. Physical devices, Safari/Firefox, native Linux/Cloudflare production, worst-case near-budget storage performance and high-refresh monitors were not verified. Filtered detail cannot reconstruct pruned history. Client storage and clocks are not anti-tamper security. An approved ad provider and its audience/consent requirements remain external prerequisites. Original generated assets avoid redistribution uncertainty; the owner has not selected a project-wide code license.
 
 The local implementation is ready for review. Public release still awaits owner approval, existing Worker settings verification, audience/privacy review and a live-domain smoke test. Do not equate local tests with a production deployment.
+
+
+The subsequent 2026-11-25 gameplay overhaul is documented in UI_OVERHAUL_REPORT.md. Earlier test counts and server handoff notes in this report describe the original release only.

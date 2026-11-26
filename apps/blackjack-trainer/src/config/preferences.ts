@@ -18,6 +18,8 @@ export const shortcuts = {
   chip25: "3",
   chip100: "4",
   chip500: "5",
+  chip1000: "6",
+  chip5000: "7",
 };
 export const defaults = {
   theme: "green",
@@ -72,6 +74,25 @@ const settings = z.object({
 });
 export function validatePreferences(raw: unknown): Preferences {
   const parsed = settings.parse(raw);
+  for (const [name, preferred] of [
+    ["chip1000", "6"],
+    ["chip5000", "7"],
+  ]) {
+    if (!parsed.shortcuts[name!]) {
+      const used = new Set(
+        Object.values(parsed.shortcuts).map((k) => k.toLowerCase()),
+      );
+      parsed.shortcuts[name!] = [
+        preferred!,
+        "8",
+        "9",
+        "0",
+        "F6",
+        "F7",
+        "F8",
+      ].find((key) => !used.has(key.toLowerCase()))!;
+    }
+  }
   for (const key of Object.keys(shortcuts))
     if (!parsed.shortcuts[key]) throw Error("Missing shortcut");
   const values = Object.values(parsed.shortcuts).map((x) => x.toLowerCase());

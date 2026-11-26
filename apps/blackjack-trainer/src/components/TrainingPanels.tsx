@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useGame, dispatch, env } from "../store";
+import { useGame, dispatch, env, preferences } from "../store";
 import { between, activeHand } from "../engine/engine";
 import { money, pendingTotal } from "../engine/types";
 import type { CountCheck } from "../engine/types";
@@ -182,7 +182,11 @@ export function Count() {
       !!useGame.getState().exposure.weights,
   );
   if (!s) return null;
-  const check = (skip = false, reveal = false) => {
+  const runningLocked =
+    kind === "running" &&
+    (s.countTraining.visible || s.countTraining.hiddenRounds < 10);
+  const check = async (skip = false, reveal = false) => {
+    if (!skip && !reveal && runningLocked) return;
     if (
       !skip &&
       !reveal &&
@@ -211,8 +215,11 @@ export function Count() {
       penetration: s.shoe.cursor / s.shoe.cards.length,
       sessionId: s.sessionId,
     };
-    setResult(record);
-    void dispatch({ type: "check", check: record });
+    await dispatch({ type: "check", check: record });
+    const committed = useGame
+      .getState()
+      .state?.checks.find((c) => c.id === record.id);
+    if (committed) setResult(committed);
   };
   return (
     <>
@@ -224,7 +231,11 @@ export function Count() {
           <Field label="Exercise">
             <select
               value={kind}
-              onChange={(e) => setKind(e.target.value as "running" | "true")}
+              onChange={(e) => {
+                const kind = e.target.value as "running" | "true";
+                setKind(kind);
+                if (kind === "true") preferences({ running: true });
+              }}
             >
               <option value="running">Running count</option>
               <option value="true">True count</option>
@@ -237,20 +248,32 @@ export function Count() {
               the first by the second; answer to one decimal place.
             </p>
           )}
-          <Field label={`Your ${kind} count`}>
-            <input
-              autoFocus
-              type="number"
-              step={kind === "true" ? ".1" : "1"}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") check();
-              }}
-            />
-          </Field>
+          {runningLocked && (
+            <p>
+              Keep the running count hidden for 10 completed rounds to unlock
+              guessing.
+            </p>
+          )}
+          {!runningLocked && (
+            <Field label={`Your ${kind} count`}>
+              <input
+                autoFocus
+                type="number"
+                step={kind === "true" ? ".1" : "1"}
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") check();
+                }}
+              />
+            </Field>
+          )}
           <div className="button-row">
-            <Button variant="primary" onClick={() => check()}>
+            <Button
+              variant="primary"
+              disabled={runningLocked}
+              onClick={() => check()}
+            >
               Check answer
             </Button>
             <Button onClick={() => check(true)}>Skip</Button>
@@ -276,7 +299,11 @@ export function Count() {
                 ? "Correct"
                 : "Keep practicing"}
           </h3>
-          <p>Correct count: {result.actual.toFixed(kind === "true" ? 1 : 0)}</p>
+          {(result.submitted !== null || result.revealed) && (
+            <p>
+              Correct count: {result.actual.toFixed(kind === "true" ? 1 : 0)}
+            </p>
+          )}
           {result.error !== null && (
             <p>
               Your answer: {result.submitted} · difference{" "}

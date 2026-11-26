@@ -6,6 +6,7 @@ import {
   betTotal,
   denominations,
   emptyBet,
+  emptyCountTraining,
   pendingTotal,
   sum,
 } from "./types";
@@ -55,6 +56,7 @@ export const emptyTotals = (): Totals => ({
 export function initialState(env: Environment): GameState {
   const sessionId = env.id();
   const s: GameState = {
+    countTraining: emptyCountTraining(),
     schema: 1,
     revision: 0,
     balance: 0,
@@ -98,6 +100,7 @@ export const between = (s: GameState) =>
   !s.round || ["complete", "canceled"].includes(s.round.phase);
 export function projection(r: Round, shoe?: GameState["shoe"]): Projection {
   return {
+    sideResults: structuredClone(r.sideResults),
     dealer: r.dealer.map((c, i) => (i === 1 && !r.holeRevealed ? null : c)),
     hands: structuredClone(r.hands),
     active: r.active,
@@ -369,7 +372,12 @@ function finish(s: GameState, e: Environment) {
   }
   r.active = null;
   r.phase = "complete";
-  r.net = s.balance - r.startBalance;
+  r.net =
+    s.balance -
+    r.startBalance -
+    s.ledger
+      .filter((t) => t.roundId === r.id && t.kind === "count peek penalty")
+      .reduce((total, t) => total + t.amount, 0);
   event(s, e, "complete", `Round complete; net ${r.net / 2} chips`);
   markTotals(s, e);
 }
@@ -499,7 +507,12 @@ function cancel(s: GameState, e: Environment) {
   r.phase = "canceled";
   r.cancelReason =
     "Shoe exhausted. Main wagers refunded; resolved side bets and insurance retained.";
-  r.net = s.balance - r.startBalance;
+  r.net =
+    s.balance -
+    r.startBalance -
+    s.ledger
+      .filter((t) => t.roundId === r.id && t.kind === "count peek penalty")
+      .reduce((total, t) => total + t.amount, 0);
   event(s, e, "canceled", r.cancelReason);
   markTotals(s, e);
   s.shoe.pending = true;
@@ -527,7 +540,7 @@ function validateBets(s: GameState, bets: Bet[], dealing = false) {
       )
         throw Error("Unknown chip");
       const amount = sum(b[kind]);
-      if (amount > (kind === "main" ? 2000 : 200))
+      if (amount > (kind === "main" ? 100000 : 200))
         throw Error("Wager exceeds table limit");
       if (
         ((kind === "pairs" && !s.rules.pairs) ||
@@ -578,6 +591,32 @@ function currentSession(s: GameState, e: Environment) {
   }
   return s.sessions.find((x) => x.id === s.sessionId)!;
 }
+function setCountVisibility(s: GameState, e: Environment, visible: boolean) {
+  const training = s.countTraining;
+  if (training.visible === visible) return;
+  if (visible) {
+    if (training.hiddenRounds >= 10 && !training.peekId)
+      training.peekId = e.id();
+    training.hiddenRounds = 0;
+    training.eligibleRoundId = null;
+    training.lastGuess = null;
+  } else if (training.peekId) {
+    const id = training.peekId;
+    const amount = Math.min(200, s.balance);
+    ledger(s, e, "count peek penalty", -amount, "count-peek:" + id);
+    const clearedBets = pendingTotal(s) > s.balance;
+    if (clearedBets) {
+      s.bets = [emptyBet(), emptyBet(), emptyBet()];
+      s.undo = [];
+    }
+    training.lastPenalty = { id, time: e.now, amount, clearedBets };
+    training.peekId = null;
+    training.hiddenRounds = 0;
+    training.eligibleRoundId = null;
+    training.lastGuess = null;
+  }
+  training.visible = visible;
+}
 export function applyCommand(
   previous: GameState,
   command: Command,
@@ -589,12 +628,66 @@ export function applyCommand(
   s.lastClock = e.now;
   try {
     switch (command.type) {
+      case "countVisibility":
+        setCountVisibility(s, e, command.visible);
+        break;
+      case "countGuess": {
+        if (s.countTraining.visible || s.countTraining.hiddenRounds < 10)
+          throw Error(
+            "Guessing requires 10 completed rounds with the count hidden",
+          );
+        if (!Number.isSafeInteger(command.value))
+          throw Error("Enter a whole-number count");
+        const id = e.id(),
+          actual = s.shoe.running;
+        s.countTraining.lastGuess = {
+          id,
+          time: e.now,
+          submitted: command.value,
+          correct: command.value === actual,
+        };
+        s.checks.push({
+          id,
+          time: e.now,
+          kind: "running",
+          submitted: command.value,
+          actual,
+          error: command.value - actual,
+          correct: command.value === actual,
+          assisted: !!command.assisted,
+          revealed: false,
+          durationMs: 0,
+          decks: s.rules.decks,
+          penetration: s.shoe.cursor / s.shoe.cards.length,
+          sessionId: s.sessionId,
+        });
+        s.totals.counts++;
+        if (command.value === actual) s.totals.countCorrect++;
+        if (s.checks.length > 5000) s.checks.shift();
+        unlock(s, e);
+        break;
+      }
+      case "rebetDeal": {
+        const restored = applyCommand(previous, { type: "rebet" }, env);
+        const dealt = applyCommand(restored, { type: "deal" }, env);
+        dealt.revision = previous.revision + 1;
+        assertState(dealt);
+        return dealt;
+      }
+      case "removeChip":
       case "chip":
       case "undo":
       case "clear":
       case "rebet":
       case "doubleBet": {
-        if (s.round) throw Error("Select Next round before modifying bets");
+        const fromSettlement = !!s.round;
+        if (s.round) {
+          if (!between(s))
+            throw Error("Wagers cannot change during an active round");
+          if (!["rebet", "doubleBet", "clear"].includes(command.type))
+            throw Error("Choose a next-round betting action first");
+          resetBetting(s, e);
+        }
         const old = structuredClone(s.bets);
         if (command.type === "chip") {
           if (
@@ -605,6 +698,17 @@ export function applyCommand(
             throw Error("Invalid position");
           s.bets[command.position]![command.kind].push(command.chip);
         }
+        if (command.type === "removeChip") {
+          if (
+            !Number.isInteger(command.position) ||
+            command.position < 0 ||
+            command.position > 2
+          )
+            throw Error("Invalid position");
+          const chips = s.bets[command.position]![command.kind];
+          if (!chips.length) throw Error("This spot is empty");
+          chips.pop();
+        }
         if (command.type === "undo") {
           const b = s.undo.pop();
           if (!b) throw Error("Nothing to undo");
@@ -613,12 +717,10 @@ export function applyCommand(
           s.bets = [emptyBet(), emptyBet(), emptyBet()];
         else if (command.type === "rebet") {
           s.bets = structuredClone(s.previousBets);
-          for (const b of s.bets) {
-            if (!s.rules.pairs) b.pairs = [];
-            if (!s.rules.three) b.three = [];
-          }
         } else if (command.type === "doubleBet")
-          s.bets = s.bets.map((b) => ({
+          s.bets = (
+            fromSettlement || !pendingTotal(s) ? s.previousBets : s.bets
+          ).map((b) => ({
             main: [...b.main, ...b.main],
             pairs: [...b.pairs, ...b.pairs],
             three: [...b.three, ...b.three],
@@ -876,17 +978,32 @@ export function applyCommand(
         }
         break;
       }
-      case "check":
+      case "check": {
+        const check = { ...command.check };
+        if (check.revealed || check.kind === "true")
+          setCountVisibility(s, e, true);
+        if (check.kind === "running" && check.submitted !== null) {
+          if (s.countTraining.visible || s.countTraining.hiddenRounds < 10)
+            throw Error(
+              "Guessing requires 10 completed rounds with the count hidden",
+            );
+          if (!Number.isSafeInteger(check.submitted))
+            throw Error("Enter a whole-number count");
+          check.actual = s.shoe.running;
+          check.error = check.submitted! - s.shoe.running;
+          check.correct = check.submitted === s.shoe.running;
+        }
         if (!between(s))
           throw Error("Count checks are available between rounds");
-        s.checks.push(command.check);
-        if (command.check.submitted !== null) {
+        s.checks.push(check);
+        if (check.submitted !== null) {
           s.totals.counts++;
-          if (command.check.correct) s.totals.countCorrect++;
+          if (check.correct) s.totals.countCorrect++;
         }
         if (s.checks.length > 5000) s.checks.shift();
         unlock(s, e);
         break;
+      }
       case "reviewMistake": {
         if (!["hard", "soft", "pair", "insurance"].includes(command.category))
           throw Error("Unknown hand category");
@@ -919,6 +1036,12 @@ export function applyCommand(
           const fresh = initialState(e);
           fresh.revision = s.revision + 1;
           return fresh;
+        }
+        if (["balance", "gameplay", "education"].includes(command.scope)) {
+          s.countTraining = {
+            ...emptyCountTraining(s.countTraining.visible),
+            peekId: s.countTraining.peekId,
+          };
         }
         if (command.scope === "balance") {
           s.bets = [emptyBet(), emptyBet(), emptyBet()];
@@ -966,6 +1089,23 @@ export function applyCommand(
     if (error instanceof Exhausted && s.round) cancel(s, e);
     else throw error;
   }
+  if (s.shoe.cursor !== previous.shoe.cursor || s.shoe.id !== previous.shoe.id)
+    s.countTraining.lastGuess = null;
+  // Only rounds that began hidden and never exposed the count earn credit.
+  if (s.round && s.round.id !== previous.round?.id && !s.countTraining.visible)
+    s.countTraining.eligibleRoundId = s.round.id;
+  if (
+    s.round?.phase === "complete" &&
+    (previous.round?.id !== s.round.id || previous.round.phase !== "complete")
+  ) {
+    if (
+      !s.countTraining.visible &&
+      s.countTraining.eligibleRoundId === s.round.id
+    )
+      s.countTraining.hiddenRounds++;
+    s.countTraining.eligibleRoundId = null;
+  }
+  if (s.round?.phase === "canceled") s.countTraining.eligibleRoundId = null;
   s.revision++;
   if (s.ledger.length > 20000) {
     const removed = s.ledger.splice(0, s.ledger.length - 20000);
@@ -975,6 +1115,15 @@ export function applyCommand(
   return s;
 }
 export function assertState(s: GameState) {
+  const training = s.countTraining;
+  if (
+    !Number.isSafeInteger(training.hiddenRounds) ||
+    training.hiddenRounds < 0 ||
+    (training.visible &&
+      (training.hiddenRounds > 0 || training.eligibleRoundId !== null)) ||
+    (!training.visible && training.peekId !== null)
+  )
+    throw Error("Invalid count training state");
   if (
     !Number.isSafeInteger(s.balance) ||
     s.balance < 0 ||
@@ -1033,6 +1182,7 @@ export function assertState(s: GameState) {
       .size !== s.shoe.cards.length
   )
     throw Error("Invalid physical deck contents");
+  validateBets(s, s.bets);
   validRules(s.rules);
 }
 export function mockEnvironment(

@@ -11,3 +11,5 @@ IndexedDB schema v1 has state and ownership stores. A single snapshot avoids dup
 A Web Lock coordinates one active document when supported. A database lease/heartbeat remains mandatory; CAS revision checking is independent of Web Locks. Crashed/unavailable-lock browsers may need up to eight seconds to reclaim ownership. This is local coordination, not anti-tamper security.
 
 The repository registry assembles four entries into one dist artifact. The app's Vite base is /blackjack-trainer/, with no external assets or backend. Existing Worker configuration, domain and routes are unchanged.
+
+The 2026-11-25 table uses shared pure layout geometry for Phaser cards and a stable React input/annotation overlay. Phaser has no betting hit zones or gameplay callbacks. Consecutive already-queued betting intents reduce in order into one persisted candidate; non-betting commands form barriers. Display stack normalization never rewrites placement history or ledger values. All real split children remain visible, including children awaiting their second card. See DECISIONS.md and UI_OVERHAUL_REPORT.md.

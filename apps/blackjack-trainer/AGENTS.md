@@ -5,3 +5,5 @@ Read docs/SPECIFICATION.md, DEVELOPMENT_PROGRESS.md and docs/DECISIONS.md before
 The independent TypeScript engine is authoritative. React/Zustand and Phaser render committed state; animations never draw cards, credit chips or make decisions. Currency is integer half-chip units. Never count hidden cards, change confirmed rules/paytables, rig shuffling, add real money, or activate advertising. Preserve original website, trainer and dungeon behavior. No push or production deployment without approval.
 
 Keep desktop/portrait/landscape accessible. Preserve database compatibility and never overwrite unreadable data. Run typecheck, unit/mathematics tests, simulations, browser checks and production build for relevant changes. Record actual passing checks and remaining requirements in DEVELOPMENT_PROGRESS.md. Do not claim unfinished release gates are complete.
+
+The confirmed 2026-11-25 gameplay amendments are in docs/UI_OVERHAUL_SPECIFICATION.md; read these alongside the original master specification. See docs/UI_OVERHAUL_REPORT.md for the implemented architecture and latest handoff.

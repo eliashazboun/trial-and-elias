@@ -1,3 +1,11 @@
+# Current confirmed revision — November 25, 2026
+
+The [hand totals, betting layout and payout animation amendment](HAND_PRESENTATION_SPECIFICATION.md) adds evaluated totals beneath each hand, card-centered wagers toward the dealer, persistent per-position side wagers and independent prominent net results. Settlement animations consume authoritative projected outcomes; they never change bankroll transactions. This amendment supersedes earlier conflicting result/stack presentation wording.
+
+The [running-count guessing amendment](COUNT_GUESSING_SPECIFICATION.md) adds a compact inline guess after ten fully hidden completed rounds. Visibility/progress and one-shot peek penalties are persisted with the authoritative game state; initial pre-upgrade rounds earn no retroactive credit. An eligible reveal resets progress and arms one penalty, charged on hiding again (100 chips or the available balance). Existing running-count exercises share the eligibility rule. Card-counting arithmetic and strategy tables remain unchanged.
+
+The [gameplay UI/UX overhaul](UI_OVERHAUL_SPECIFICATION.md) supersedes conflicting original presentation requirements below. All gameplay controls belong inside the table; active-hand actions float above that hand; every split hand stays visible. Seven chip denominations, 50,000-chip main limits, pure visual normalization, per-spot removal, immediate post-round betting and a three-second hint delay are confirmed. Original rules, paytables, persistence, privacy and engine authority remain. The complete original brief is retained below with updated numeric limits; the linked full overhaul controls conflicts.
+
 # MASTER DEVELOPMENT PROMPT
 # BLACKJACK TRAINER
 
@@ -1226,6 +1234,8 @@ There are no deposits, withdrawals, payment processing, or user accounts.
 | 25 | Green |
 | 100 | Black |
 | 500 | Purple |
+| 1,000 | Orange |
+| 5,000 | Pink |
 
 Each denomination must also display a numerical label.
 
@@ -1237,7 +1247,7 @@ Main wager per original position:
 
 ```text
 Minimum: 10 chips
-Maximum: 1,000 chips
+Maximum: 50,000 chips
 ```
 
 Each side bet:
@@ -1419,7 +1429,7 @@ A stack containing:
 100 + 25 + 25 + 5 + 1
 ```
 
-Must visibly contain the corresponding black, green, green, red, and white chips.
+Its logical placement history remains black, green, green, red and white for undo. Its visible representation is normalized from the authoritative total.
 
 Do not represent every wager as a single generic chip.
 
@@ -2710,7 +2720,7 @@ Use most of the viewport for the table.
 
 Only show enabled indicators.
 
-**Bottom controls**
+**On-table controls (inside the table boundary)**
 
 During betting:
 
@@ -5088,8 +5098,8 @@ Do not change the following confirmed decisions:
 22. Secure production randomness.
 23. Seeded developer test mode.
 24. Starting balance of 1,000 chips.
-25. Chip denominations of 1, 5, 25, 100, and 500.
-26. Main wager limits of 10–1,000.
+25. Chip denominations of 1, 5, 25, 100, 500, 1,000 and 5,000.
+26. Main wager limits of 10–50,000.
 27. Side wager limits of 1–100.
 28. Perfect Pairs payouts of 25:1, 12:1, and 6:1.
 29. 21+3 payouts of 100:1, 40:1, 30:1, 10:1, and 5:1.

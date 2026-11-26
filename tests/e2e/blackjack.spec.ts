@@ -1,114 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
-import {
-  initialState,
-  mockEnvironment,
-  applyCommand,
-  legalActions,
-} from "../../apps/blackjack-trainer/src/engine/engine";
-import { seeded } from "../../apps/blackjack-trainer/src/engine/cards";
-import { defaults } from "../../apps/blackjack-trainer/src/config/preferences";
-import type {
-  GameState,
-  Rank,
-  Card,
-} from "../../apps/blackjack-trainer/src/engine/types";
-const URL = "/blackjack-trainer/",
-  DB = "trial-and-elias:blackjack:v1",
-  PREF = "trial-and-elias:blackjack:preferences:v1";
-function fixture(
-  order: Rank[] = ["8", "6", "8", "10", "3", "2", "4", "5", "9"],
-) {
-  const env = mockEnvironment(seeded(37), Date.now());
-  let state = initialState(env);
-  const chosen: Card[] = [];
-  for (const rank of order)
-    chosen.push(
-      state.shoe.cards.find(
-        (c) => c.rank === rank && !chosen.some((x) => x.id === c.id),
-      )!,
-    );
-  state.shoe.cards = [
-    ...chosen,
-    ...state.shoe.cards.filter((c) => !chosen.some((x) => x.id === c.id)),
-  ];
-  return {
-    env,
-    state,
-    apply: (s: GameState, c: Parameters<typeof applyCommand>[1]) =>
-      applyCommand(s, c, env),
-  };
-}
-async function install(
-  page: import("@playwright/test").Page,
-  state: GameState,
-  options = {},
-) {
-  await page.goto("/");
-  await page.evaluate(
-    async ({ state, options, db, pref, defaults }) => {
-      localStorage.setItem(
-        pref,
-        JSON.stringify({
-          ...defaults,
-          onboarded: true,
-          speed: "instant",
-          ...options,
-        }),
-      );
-      await new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(db, 1);
-        req.onupgradeneeded = () => {
-          req.result.createObjectStore("state");
-          req.result.createObjectStore("ownership");
-        };
-        req.onerror = () => reject(req.error);
-        req.onsuccess = () => {
-          const database = req.result,
-            tx = database.transaction("state", "readwrite");
-          tx.objectStore("state").put(state, "current");
-          tx.oncomplete = () => {
-            database.close();
-            resolve();
-          };
-          tx.onerror = () => reject(tx.error);
-        };
-      });
-    },
-    { state, options, db: DB, pref: PREF, defaults },
-  );
-  await page.goto(URL);
-  await expect(
-    page.getByRole("heading", { name: "Blackjack Trainer", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".table-canvas canvas")).toHaveCount(1);
-}
-async function snapshot(page: import("@playwright/test").Page) {
-  return page.evaluate(
-    async (db) =>
-      new Promise<GameState>((resolve, reject) => {
-        const r = indexedDB.open(db, 1);
-        r.onsuccess = () => {
-          const database = r.result,
-            req = database
-              .transaction("state")
-              .objectStore("state")
-              .get("current");
-          req.onsuccess = () => {
-            database.close();
-            resolve(req.result);
-          };
-          req.onerror = () => reject(req.error);
-        };
-      }),
-    DB,
-  );
-}
-const errors = (page: import("@playwright/test").Page) => {
-  const all: string[] = [];
-  page.on("pageerror", (e) => all.push(e.message));
-  return all;
-};
+import { legalActions } from "../../apps/blackjack-trainer/src/engine/engine";
+import { fixture, install, snapshot, errors } from "./blackjack-fixtures";
+const URL = "/blackjack-trainer/";
 test("blackjack is discoverable and completes a saved split/double round with exact ledger and distinct site storage", async ({
   page,
 }) => {
@@ -120,28 +14,24 @@ test("blackjack is discoverable and completes a saved split/double round with ex
     localStorage.setItem("one-minute-dungeon:v1", "retained game");
   });
   await page
-    .getByRole("button", { name: "Main: 0", exact: true })
+    .getByRole("button", { name: "Position 1 Main: 0", exact: true })
     .first()
     .click();
   await expect(page.locator(".wallet-button strong")).toHaveText("975");
-  await page.getByRole("button", { name: "Deal cards" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Play your hand" }),
-  ).toBeVisible();
-  await expect(page.locator(".dealer-dom")).toContainText("Face down");
+  await page.getByRole("button", { name: "Deal", exact: true }).click();
+  await expect(page.locator(".floating-actions")).toHaveCount(1);
+  await expect(page.locator(".dealer-summary")).toContainText("Face down");
   const before = await snapshot(page);
   expect(before.shoe.revealed).toHaveLength(3);
   await page.reload();
   await expect(page.locator(".table-canvas canvas")).toHaveCount(1);
   const after = await snapshot(page);
   expect(after).toEqual(before);
-  await page.getByRole("button", { name: "Split P", exact: true }).click();
-  await expect(page.locator(".hand-list details")).toHaveCount(2);
-  await page.getByRole("button", { name: "Double D", exact: true }).click();
-  await page.getByRole("button", { name: "Stand S", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Round complete" }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(page.locator(".on-table-hand")).toHaveCount(2);
+  await page.getByRole("button", { name: "Double", exact: true }).click();
+  await page.getByRole("button", { name: "Stand", exact: true }).click();
+  await expect(page.locator(".round-net")).toBeVisible();
   const settled = await snapshot(page);
   expect(settled.totals.hands).toBe(2);
   expect(
@@ -175,11 +65,9 @@ test("insurance peek pays half-chip insurance correctly and reveals the hole car
   });
   s = f.apply(s, { type: "deal" });
   await install(page, s);
-  await expect(page.locator(".dealer-dom")).toContainText("Face down");
+  await expect(page.locator(".dealer-summary")).toContainText("Face down");
   await page.getByRole("button", { name: "Insure 12.5", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Round complete" }),
-  ).toBeVisible();
+  await expect(page.locator(".round-net")).toBeVisible();
   const state = await snapshot(page);
   expect(state.balance).toBe(2050);
   expect(state.shoe.revealed).toHaveLength(4);
@@ -236,14 +124,14 @@ test("all twelve hands remain inspectable across desktop, portrait and landscape
   ] as const) {
     await page.setViewportSize({ width, height });
     await page.waitForTimeout(200);
-    await expect(page.locator(".hand-list details")).toHaveCount(12);
+    await expect(page.locator(".on-table-hand")).toHaveCount(12);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
     await expect(
-      page.getByRole("button", { name: "Stand S", exact: true }),
+      page.getByRole("button", { name: "Stand", exact: true }),
     ).toBeEnabled();
     expect((await snapshot(page)).revision).toBe(s.revision);
     if (width === 390 || width === 1440)
@@ -301,7 +189,10 @@ test("strategy, tutorials, skipped count checks, settings, JSON export and malfo
   await page.getByRole("button", { name: "Count check", exact: true }).click();
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Skipped" })).toBeVisible();
-  await page.getByRole("button", { name: "Close panel" }).click();
+  await expect(page.locator(".count-popover")).not.toContainText(
+    "Correct count:",
+  );
+  await page.getByRole("button", { name: "Close count check" }).click();
   expect((await snapshot(page)).totals.counts).toBe(0);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
@@ -352,53 +243,6 @@ test("unavailable IndexedDB fails safely and does not create a fake wallet", asy
   await expect(page.locator(".table-canvas canvas")).toHaveCount(0);
 });
 
-test("canvas chip drag, canceled drop, keyboard selection and independent side-bet toggles work", async ({
-  page,
-}) => {
-  const f = fixture();
-  await install(page, f.state);
-  const canvas = page.locator(".table-canvas canvas");
-  const box = (await canvas.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height - 46);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 4, box.y + box.height * 0.59, {
-    steps: 12,
-  });
-  await page.mouse.up();
-  await expect(
-    page.getByRole("button", { name: "Main: 25", exact: true }),
-  ).toBeVisible();
-  let state = await snapshot(page);
-  expect(state.bets[0]!.main).toEqual([25]);
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height - 46);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2, box.y + 20, { steps: 10 });
-  await page.mouse.up();
-  expect((await snapshot(page)).balance).toBe(state.balance);
-  expect((await snapshot(page)).bets[0]!.main).toEqual([25]);
-  await page.locator("h2").click();
-  await page.keyboard.press("2");
-  await page
-    .getByRole("button", { name: "Perfect Pairs: 0", exact: true })
-    .first()
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Perfect Pairs: 5", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByLabel("Perfect Pairs", { exact: true }).click();
-  await expect(
-    page.getByLabel("Perfect Pairs", { exact: true }),
-  ).not.toBeChecked();
-  await page.getByRole("button", { name: "Close panel" }).click();
-  await expect(
-    page.getByRole("button", { name: /Perfect Pairs:/ }),
-  ).toHaveCount(0);
-  state = await snapshot(page);
-  expect(state.bets[0]!.pairs).toEqual([]);
-  expect(state.bets[0]!.main).toEqual([25]);
-});
-
 test("educational feedback survives persistence and confirmation exposure retains the first attempt", async ({
   page,
   context,
@@ -412,16 +256,18 @@ test("educational feedback survives persistence and confirmation exposure retain
   });
   state = f.apply(state, { type: "deal" });
   await install(page, state, { feedback: "educational" });
-  await page.getByRole("button", { name: "Stand S", exact: true }).click();
-  await expect(page.locator(".alert").first()).toContainText("SPLIT");
+  await page.getByRole("button", { name: "Stand", exact: true }).click();
+  await expect(page.locator(".on-table-message").first()).toContainText(
+    "SPLIT",
+  );
   await page.close();
   const next = await context.newPage();
   await install(next, state, { feedback: "confirm" });
-  await next.getByRole("button", { name: "Stand S", exact: true }).click();
+  await next.getByRole("button", { name: "Stand", exact: true }).click();
   await expect(next.getByRole("dialog")).toContainText("Review your decision");
   await next.getByRole("button", { name: "Choose again", exact: true }).click();
-  await next.getByRole("button", { name: "Split P", exact: true }).click();
-  await expect(next.locator(".hand-list details")).toHaveCount(2);
+  await next.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(next.locator(".on-table-hand")).toHaveCount(2);
   const saved = await snapshot(next);
   expect(saved.round!.decisions[0]).toMatchObject({
     firstSelected: "stand",

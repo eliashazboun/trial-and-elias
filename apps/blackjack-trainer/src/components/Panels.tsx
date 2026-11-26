@@ -1,6 +1,6 @@
 import { useGame } from "../store";
 import { Dialog } from "./ui/dialog";
-import { Wallet, Strategy, Count, Learn } from "./TrainingPanels";
+import { Wallet, Strategy, Learn } from "./TrainingPanels";
 import { Settings } from "./Settings";
 import { Stats } from "./Stats";
 function Rules() {
@@ -19,7 +19,7 @@ function Rules() {
           penetration
         </dd>
         <dt>Main bets</dt>
-        <dd>10–1,000 whole chips per position</dd>
+        <dd>10–50,000 whole chips per position</dd>
         <dt>Side bets</dt>
         <dd>1–100 whole chips each, with a valid main bet</dd>
         <dt>Double</dt>
@@ -115,7 +115,7 @@ function Privacy() {
 }
 export function Panels() {
   const { panel, setPanel, error } = useGame();
-  if (!panel) return null;
+  if (!panel || panel === "count") return null;
   const names = {
     wallet: "Your wallet",
     strategy: "Basic strategy",
@@ -153,8 +153,6 @@ export function Panels() {
         <Settings />
       ) : panel === "learn" ? (
         <Learn />
-      ) : panel === "count" ? (
-        <Count />
       ) : (
         <Privacy />
       )}

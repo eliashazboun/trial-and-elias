@@ -34,6 +34,8 @@ interface Store {
   preferences: Preferences;
   ready: boolean;
   busy: boolean;
+  pendingCommands: number;
+  presenting: boolean;
   locked: boolean;
   error: string;
   notice: string;
@@ -51,6 +53,8 @@ export const useGame = create<Store>((set) => ({
   preferences: { ...defaults },
   ready: false,
   busy: false,
+  pendingCommands: 0,
+  presenting: false,
   locked: false,
   error: "",
   notice: "",
@@ -70,6 +74,8 @@ const db = new Database();
 let heartbeat: ReturnType<typeof setInterval> | undefined;
 let disposed = false;
 let animationToken = 0;
+let outcomeReadableUntil = 0;
+let wakePresentation: (() => void) | null = null;
 let releaseBrowserLock: (() => void) | null = null;
 let ownsBrowserLock = false;
 export const env = () => ({
@@ -95,11 +101,15 @@ export async function initialize() {
       });
       return;
     }
-    const state = await db.load(env());
+    const loadedPreferences = loadPreferences();
+    const state = await db.load(env(), loadedPreferences.running);
     if (disposed) return;
     useGame.setState({
       state,
-      preferences: loadPreferences(),
+      preferences: {
+        ...loadedPreferences,
+        running: state.countTraining.visible,
+      },
       ready: true,
       locked: false,
       error: "",
@@ -134,7 +144,9 @@ export async function initialize() {
 }
 export async function dispose() {
   disposed = true;
+  queueGeneration++;
   animationToken++;
+  wakePresentation?.();
   if (heartbeat) clearInterval(heartbeat);
   await db.release().catch(() => {});
   db.close();
@@ -143,6 +155,13 @@ export async function dispose() {
   ownsBrowserLock = false;
 }
 export function preferences(patch: Partial<Preferences>) {
+  const { running, ...other } = patch;
+  if (
+    running !== undefined &&
+    running !== useGame.getState().state?.countTraining.visible
+  )
+    void dispatch({ type: "countVisibility", visible: running });
+  patch = other;
   try {
     const next = { ...useGame.getState().preferences, ...patch };
     savePreferences(next);
@@ -150,8 +169,7 @@ export function preferences(patch: Partial<Preferences>) {
       preferences: next,
       exposure: {
         ...v.exposure,
-        recommendation:
-          v.preferences.strategy || next.strategy || v.exposure.recommendation,
+        recommendation: !!v.exposure.recommendation,
         weights: v.preferences.weights || next.weights || v.exposure.weights,
         running: v.preferences.running || next.running || v.exposure.running,
         trueCount:
@@ -167,7 +185,7 @@ export function preferences(patch: Partial<Preferences>) {
 export function exposure(patch: Partial<Assistance>) {
   useGame.setState((v) => ({ exposure: { ...v.exposure, ...patch } }));
 }
-export async function dispatch(
+async function execute(
   command: Command,
   expected = useGame.getState().state?.revision,
 ) {
@@ -180,7 +198,7 @@ export async function dispatch(
     });
     return;
   }
-  if (command.type === "deal") {
+  if (command.type === "deal" || command.type === "rebetDeal") {
     const session = previous.sessions.find((s) => s.id === previous.sessionId)!;
     if (
       current.preferences.limitMinutes &&
@@ -193,10 +211,23 @@ export async function dispatch(
       return;
     }
   }
-  useGame.setState({ busy: true, error: "", notice: "" });
+  useGame.setState({ busy: true, presenting: false, error: "", notice: "" });
   try {
     const state = applyCommand(previous, command, env());
     await db.save(state, previous.revision);
+    const nextPreferences = {
+      ...useGame.getState().preferences,
+      running: state.countTraining.visible,
+    };
+    // The database owns visibility/penalty state; preference storage is only a mirror.
+    try {
+      savePreferences(nextPreferences);
+    } catch {
+      useGame.setState({
+        notice:
+          "Visibility saved with the table; preferences could not be updated.",
+      });
+    }
     const changed =
       state.round?.active !== previous.round?.active ||
       state.round?.phase !== previous.round?.phase ||
@@ -204,6 +235,7 @@ export async function dispatch(
       command.type === "insurance";
     useGame.setState({
       state,
+      preferences: nextPreferences,
       visual: state.round
         ? previous.round?.id === state.round.id
           ? projection(previous.round, previous.shoe)
@@ -211,6 +243,7 @@ export async function dispatch(
             projection(state.round, state.shoe))
         : null,
       busy: true,
+      presenting: true,
       confirmation: null,
       ...(changed
         ? { exposure: {}, firstSelected: null, decisionAt: performance.now() }
@@ -220,6 +253,7 @@ export async function dispatch(
     if (
       between(state) &&
       state.totals.rounds !== previous.totals.rounds &&
+      useGame.getState().pendingCommands <= 1 &&
       current.preferences.checkpoint > 0 &&
       state.totals.rounds % current.preferences.checkpoint === 0
     )
@@ -263,7 +297,8 @@ export function decision(
     constrained: r.constrained,
     correct: selected === r.available,
     assistance: {
-      recommendation: p.strategy || !!exposure.recommendation,
+      recommendation: !!exposure.recommendation,
+      strategyEnabled: p.strategy,
       chart: !!exposure.chart,
       explanation: !!exposure.explanation,
       warning: !!exposure.warning,
@@ -280,6 +315,7 @@ export async function act(
   revision?: number,
   confirmed = false,
 ) {
+  if (useGame.getState().busy || useGame.getState().pendingCommands) return;
   const current = useGame.getState(),
     record = decision(action, useGame.getState().firstSelected ?? action);
   if (!record || !current.state) return;
@@ -320,13 +356,19 @@ export async function restore(state: GameState, prefs: Preferences) {
     !current.state ||
     !between(current.state) ||
     current.busy ||
+    current.pendingCommands > 0 ||
     current.locked
   )
     throw Error("Restore is only available between rounds in the playing tab");
   const next = { ...state, revision: current.state.revision + 1 };
   await db.save(next, current.state.revision);
-  useGame.setState({ state: next });
-  preferences(prefs);
+  useGame.setState({
+    state: next,
+    visual: next.round ? projection(next.round, next.shoe) : null,
+    exposure: {},
+    firstSelected: null,
+  });
+  preferences({ ...prefs, running: next.countTraining.visible });
 }
 
 async function present(previous: GameState, state: GameState) {
@@ -340,21 +382,56 @@ async function present(previous: GameState, state: GameState) {
           : 0,
       )
       .filter((e) =>
-        ["card", "reveal", "split", "settlement"].includes(e.type),
+        ["card", "reveal", "split", "side", "settlement"].includes(e.type),
       ) ?? [];
   const delay =
     p.reducedMotion || p.speed === "instant"
       ? 0
       : ({ slow: 380, normal: 200, fast: 65 }[p.speed] ?? 200);
+  const newlyFinished =
+    !!state.round &&
+    between(state) &&
+    (state.round.id !== previous.round?.id || !between(previous));
+  if (newlyFinished) outcomeReadableUntil = Infinity;
   for (const event of events) {
     if (!delay || document.hidden || token !== animationToken) break;
     useGame.setState({ visual: event.snapshot });
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        wakePresentation = null;
+        resolve();
+      }, delay);
+      wakePresentation = () => {
+        clearTimeout(timer);
+        wakePresentation = null;
+        resolve();
+      };
+    });
+  }
+  if (token === animationToken && newlyFinished && !document.hidden) {
+    outcomeReadableUntil = Date.now() + 1500;
+    useGame.setState({
+      visual: projection(state.round!, state.shoe),
+      busy: true,
+      presenting: true,
+    });
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        wakePresentation = null;
+        resolve();
+      }, 1500);
+      wakePresentation = () => {
+        clearTimeout(timer);
+        wakePresentation = null;
+        resolve();
+      };
+    });
   }
   if (token === animationToken)
     useGame.setState({
       visual: state.round ? projection(state.round, state.shoe) : null,
       busy: false,
+      presenting: false,
       decisionAt: performance.now(),
     });
 }
@@ -381,4 +458,128 @@ function acquireBrowserLock() {
       )
       .catch(reject);
   });
+}
+
+const orderedTypes = new Set([
+  "check",
+  "countVisibility",
+  "countGuess",
+  "chip",
+  "removeChip",
+  "undo",
+  "clear",
+  "rebet",
+  "doubleBet",
+  "rebetDeal",
+  "deal",
+  "rules",
+]);
+const simpleBets = new Set([
+  "chip",
+  "removeChip",
+  "undo",
+  "clear",
+  "rebet",
+  "doubleBet",
+]);
+let intentQueue = Promise.resolve();
+let queueGeneration = 0;
+let draining = false;
+const intents: { command: Command; generation: number; done: () => void }[] =
+  [];
+export function dispatch(
+  command: Command,
+  expected = useGame.getState().state?.revision,
+): Promise<void> {
+  if (!orderedTypes.has(command.type)) {
+    if (useGame.getState().pendingCommands || useGame.getState().busy)
+      return Promise.resolve();
+    const work = execute(command, expected);
+    intentQueue = work.catch(() => {});
+    return work;
+  }
+  const current = useGame.getState();
+  if (
+    current.presenting &&
+    current.state &&
+    between(current.state) &&
+    Date.now() >= outcomeReadableUntil
+  ) {
+    animationToken++;
+    wakePresentation?.();
+    useGame.setState({
+      visual: current.state.round
+        ? projection(current.state.round, current.state.shoe)
+        : null,
+      busy: false,
+      presenting: false,
+    });
+  }
+  useGame.setState((v) => ({ pendingCommands: v.pendingCommands + 1 }));
+  return new Promise<void>((done) => {
+    intents.push({ command, generation: queueGeneration, done });
+    void drainIntents();
+  });
+}
+async function drainIntents() {
+  if (draining) return;
+  draining = true;
+  try {
+    await intentQueue;
+    while (intents.length) {
+      const batch: typeof intents = [];
+      const first = intents[0]!;
+      if (simpleBets.has(first.command.type)) {
+        while (intents.length && simpleBets.has(intents[0]!.command.type))
+          batch.push(intents.shift()!);
+      } else batch.push(intents.shift()!);
+      try {
+        const valid = batch.filter((i) => i.generation === queueGeneration);
+        if (!valid.length) continue;
+        if (simpleBets.has(valid[0]!.command.type)) {
+          const current = useGame.getState();
+          if (!current.state || current.locked) continue;
+          const base = current.state;
+          let candidate = base,
+            message = "";
+          useGame.setState({
+            busy: true,
+            presenting: false,
+            error: "",
+            notice: "",
+          });
+          for (const intent of valid) {
+            try {
+              candidate = applyCommand(candidate, intent.command, env());
+            } catch (error) {
+              message = error instanceof Error ? error.message : String(error);
+            }
+          }
+          if (candidate !== base) await db.save(candidate, base.revision);
+          useGame.setState({
+            state: candidate,
+            visual: candidate.round
+              ? projection(candidate.round, candidate.shoe)
+              : null,
+            busy: false,
+            error: message,
+          });
+        } else
+          await execute(valid[0]!.command, useGame.getState().state?.revision);
+      } catch (error) {
+        useGame.setState({
+          busy: false,
+          presenting: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        useGame.setState((v) => ({
+          pendingCommands: Math.max(0, v.pendingCommands - batch.length),
+        }));
+        batch.forEach((i) => i.done());
+      }
+    }
+  } finally {
+    draining = false;
+  }
 }

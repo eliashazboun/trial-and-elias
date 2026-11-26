@@ -65,6 +65,7 @@ export interface Position {
 }
 export interface Assistance {
   recommendation: boolean;
+  strategyEnabled?: boolean;
   chart: boolean;
   explanation: boolean;
   warning: boolean;
@@ -108,6 +109,7 @@ export interface GameEvent {
   snapshot: Projection;
 }
 export interface Projection {
+  sideResults?: SideResult[];
   dealer: (Card | null)[];
   hands: Hand[];
   active: string | null;
@@ -206,7 +208,34 @@ export interface Totals {
   countCorrect: number;
   categories: Record<string, { attempts: number; correct: number }>;
 }
+export interface CountTraining {
+  visible: boolean;
+  hiddenRounds: number;
+  eligibleRoundId: string | null;
+  peekId: string | null;
+  lastPenalty: {
+    id: string;
+    time: number;
+    amount: number;
+    clearedBets: boolean;
+  } | null;
+  lastGuess: {
+    id: string;
+    time: number;
+    submitted: number;
+    correct: boolean;
+  } | null;
+}
+export const emptyCountTraining = (visible = false): CountTraining => ({
+  visible,
+  hiddenRounds: 0,
+  eligibleRoundId: null,
+  peekId: null,
+  lastPenalty: null,
+  lastGuess: null,
+});
 export interface GameState {
+  countTraining: CountTraining;
   schema: 1;
   revision: number;
   balance: number;
@@ -234,6 +263,10 @@ export interface GameState {
   adReceipts: string[];
 }
 export type Command =
+  | { type: "countVisibility"; visible: boolean }
+  | { type: "countGuess"; value: number; assisted?: boolean }
+  | { type: "removeChip"; position: number; kind: BetKind }
+  | { type: "rebetDeal" }
   | { type: "reviewMistake"; category: string }
   | { type: "adReward"; eventId: string; requestId: string }
   | { type: "chip"; position: number; kind: BetKind; chip: number }
@@ -282,7 +315,7 @@ export const DEFAULT_RULES: Rules = {
   three: true,
   version: "s17-das-v1",
 };
-export const denominations = [1, 5, 25, 100, 500] as const;
+export const denominations = [1, 5, 25, 100, 500, 1000, 5000] as const;
 export const emptyBet = (): Bet => ({ main: [], pairs: [], three: [] });
 export const sum = (chips: number[]) => chips.reduce((a, b) => a + b * 2, 0);
 export const betTotal = (b: Bet) => sum(b.main) + sum(b.pairs) + sum(b.three);
